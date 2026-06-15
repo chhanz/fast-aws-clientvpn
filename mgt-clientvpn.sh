@@ -302,14 +302,14 @@ cmd_destroy() {
 cmd_status() {
   echo "=== Stack status ==="
   aws cloudformation describe-stacks --stack-name "$STACK" --region "$REGION" \
-    --query "Stacks[0].StackStatus" --output text 2>/dev/null \
+    --query "Stacks[0].StackStatus" --output text --no-cli-pager 2>/dev/null \
     || echo "(stack not found or not accessible)"
 
   echo
   echo "=== Client VPN endpoint ==="
   aws ec2 describe-client-vpn-endpoints --region "$REGION" \
     --query "ClientVpnEndpoints[?Tags[?Key=='aws:cloudformation:stack-name' && Value=='$STACK']].[ClientVpnEndpointId, Status.Code, SplitTunnel, ClientCidrBlock]" \
-    --output table 2>/dev/null \
+    --output table --no-cli-pager 2>/dev/null \
     || echo "(endpoint not accessible)"
 
   echo
@@ -322,7 +322,7 @@ cmd_status() {
     aws ec2 describe-client-vpn-target-networks \
       --client-vpn-endpoint-id "$ep_id" --region "$REGION" \
       --query "ClientVpnTargetNetworks[].[TargetNetworkId, Status.Code]" \
-      --output table 2>/dev/null || echo "(target networks not accessible)"
+      --output table --no-cli-pager 2>/dev/null || echo "(target networks not accessible)"
   else
     echo "(no endpoint)"
   fi
