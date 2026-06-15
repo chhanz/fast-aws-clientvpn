@@ -68,7 +68,7 @@ Sequence:
 2. If none exists, generates CA/server/client certificates with easy-rsa and imports them into ACM.
    (If one exists, it is reused. This tag is the sole criterion for idempotency.)
 3. Deploys the VPN endpoint with CloudFormation.
-4. Generates the client `.ovpn` file (under `$HOME/clientvpn-certs/`).
+4. Generates the client `.ovpn` file (under `clientvpn-certs/` in the same directory as the script).
 
 > Split Tunnel vs Full Tunnel
 > - Split (default): Only internal network (`TargetCidr`) traffic goes through the VPN; the rest goes over the normal internet connection.
@@ -105,7 +105,7 @@ Proceeds only if you enter `yes`. It deletes the stack first, waits for completi
 ## Where Files Are Created
 
 - Config file: `clientvpn.conf` in the same directory as the script
-- Certificates/keys and `.ovpn`: `$HOME/clientvpn-certs/`
+- Certificates/keys and `.ovpn`: `clientvpn-certs/` in the same directory as the script
   - Private key files are saved with permission `600`.
 
 ## Troubleshooting
