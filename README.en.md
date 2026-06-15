@@ -48,6 +48,7 @@ Interactively collects the following values and saves them to `clientvpn.conf`.
 | Client CIDR | `10.100.0.0/22` | IP range assigned to VPN clients (/12 to /22) |
 | Internal network CIDR | `172.31.0.0/16` | Internal range to authorize for VPN access |
 | Split Tunnel | `true` | If true, only internal network traffic goes over the VPN |
+| DNS Servers | `169.254.169.253` | DNS pushed to VPN clients. The default resolves both internal and public domains (leave empty to keep the client default DNS) |
 
 Input is validated in two stages.
 
@@ -74,6 +75,7 @@ Sequence:
 > - Split (default): Only internal network (`TargetCidr`) traffic goes through the VPN; the rest goes over the normal internet connection.
 > - Full: All traffic (`0.0.0.0/0`) goes over the VPN. In split mode a `0.0.0.0/0` route is
 >   not created (this is intentionally blocked because it can drop connectivity).
+> - Deploying in Full Tunnel automatically adds an authorization rule for internet traffic (a `0.0.0.0/0` authorization rule); without it, internet access is blocked.
 
 ### 3. status - check status
 
@@ -116,7 +118,8 @@ Proceeds only if you enter `yes`. It deletes the stack first, waits for completi
 | configure says automatic validation is skipped | No AWS CLI permission. Verify the subnet's VPC in the console, then proceed. |
 | `Subnet does not belong to the given VPC` | The Subnet ID or VPC ID was entered incorrectly. Check the values. |
 | Stack creation fails related to ConnectionLogOptions | The template already specifies `Enabled: false`. Check your AWS CLI/permissions. |
-| No internet after deploy (Full Tunnel) | Full Tunnel sends all traffic over the VPN. Check the subnet's NAT/IGW routes. |
+| No internet after deploy (Full Tunnel) | The internet authorization rule is added automatically by this tool. If it still fails, the associated subnet's route table must have a `0.0.0.0/0 -> IGW` route (public subnet) or `0.0.0.0/0 -> NAT GW` route (private subnet). This is outside the scope of this tool, so verify it beforehand. |
+| Domain names do not resolve after deploy (Full Tunnel) | Check via status that the default DNS (`169.254.169.253`, AWS Route 53 Resolver) is pushed to clients. If you left it empty in configure, the client default DNS is used, which can fail to resolve under Full Tunnel. |
 | Cannot reach the internal network (Split Tunnel) | Verify that `TargetCidr` matches your actual internal network range. |
 | Certificate not embedded in `.ovpn` | Make sure you ran `deploy` on the host that generated the certificate. The key must exist locally to be inserted. |
 | Certificate deletion fails during destroy | The endpoint still references the certificate. Confirm the stack deletion finished, then retry. |

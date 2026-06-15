@@ -22,8 +22,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONF_FILE="$SCRIPT_DIR/clientvpn.conf"
 CERT_DIR="$SCRIPT_DIR/clientvpn-certs"   # certificates are kept next to the script (current path)
 
-# REGION/VPC_ID/SUBNET_ID/CLIENT_CIDR/TARGET_CIDR/SPLIT_TUNNEL are injected by
+# REGION/VPC_ID/SUBNET_ID/CLIENT_CIDR/TARGET_CIDR/SPLIT_TUNNEL/DNS_SERVERS are injected by
 # load_conf via source (SPLIT_TUNNEL is overridden to false only on deploy --full-tunnel).
+# DNS_SERVERS defaults to 169.254.169.253 (AWS Route 53 Resolver) if absent in conf.
 
 # ===== Common helpers =====
 err()  { echo "[X] $*" >&2; }
@@ -68,13 +69,14 @@ cmd_configure() {
     echo
   fi
 
-  local region vpc subnet ccidr tcidr split
+  local region vpc subnet ccidr tcidr split dns
   read -rp "Region [ap-northeast-2]: " region;        region=${region:-ap-northeast-2}
   read -rp "VPC ID: " vpc
   read -rp "Subnet ID: " subnet
   read -rp "Client CIDR (/22~/12) [10.100.0.0/22]: " ccidr; ccidr=${ccidr:-10.100.0.0/22}
   read -rp "Internal network CIDR (to authorize) [172.31.0.0/16]: " tcidr;  tcidr=${tcidr:-172.31.0.0/16}
   read -rp "Split Tunnel? (true/false) [true]: " split;     split=${split:-true}
+  read -rp "DNS servers (comma-separated) [169.254.169.253]: " dns; dns=${dns:-169.254.169.253}
 
   # --- 1) Format validation (offline, always performed) ---
   if [[ ! $vpc =~ ^vpc- ]]; then
@@ -127,6 +129,7 @@ SUBNET_ID=$subnet
 CLIENT_CIDR=$ccidr
 TARGET_CIDR=$tcidr
 SPLIT_TUNNEL=$split
+DNS_SERVERS=$dns
 EOF
   ok "Saved -> $CONF_FILE"
 }
@@ -194,6 +197,9 @@ cmd_deploy() {
     err "Failed to obtain a certificate ARN."; exit 1
   fi
 
+  # DNS_SERVERS may be absent in older conf files; default to the AWS Route 53 Resolver address.
+  DNS_SERVERS="${DNS_SERVERS:-169.254.169.253}"
+
   # [4] CloudFormation deploy
   info "Deploying CloudFormation stack: $STACK (SplitTunnel=$SPLIT_TUNNEL)"
   aws cloudformation deploy \
@@ -206,6 +212,7 @@ cmd_deploy() {
         SubnetId="$SUBNET_ID" \
         TargetCidr="$TARGET_CIDR" \
         SplitTunnel="$SPLIT_TUNNEL" \
+        DnsServers="$DNS_SERVERS" \
     --region "$REGION"
 
   ok "Deployment complete."
@@ -334,6 +341,7 @@ cmd_status() {
 
   echo "=== Tunnel mode ==="
   echo "Current conf SPLIT_TUNNEL=$SPLIT_TUNNEL ($([ "$SPLIT_TUNNEL" = "true" ] && echo 'Split: only internal network over VPN' || echo 'Full: all traffic over VPN'))"
+  echo "DNS servers pushed to clients: ${DNS_SERVERS:-169.254.169.253}"
   echo
   warn "Note: Client CIDR($CLIENT_CIDR) cannot be changed after the endpoint is created. To change it, destroy and redeploy."
 }

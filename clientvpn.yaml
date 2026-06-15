@@ -28,11 +28,21 @@ Parameters:
     Description: >
       true = split tunnel (only TargetCidr over VPN). false = full tunnel
       (0.0.0.0/0 route added). Split tunnel must NOT have a 0.0.0.0/0 route.
+  DnsServers:
+    Type: CommaDelimitedList
+    Default: "169.254.169.253"
+    Description: >
+      DNS servers pushed to VPN clients (comma-separated, up to 2).
+      Default 169.254.169.253 is the AWS Route 53 Resolver link-local
+      address, which resolves both internal (private hosted zone) and
+      public domains. Set to empty to keep the client default DNS.
 
 Conditions:
   # Create the 0.0.0.0/0 route only in full tunnel mode.
   # In split tunnel mode a 0.0.0.0/0 route risks dropping client connectivity.
   IsFullTunnel: !Equals [ !Ref SplitTunnel, "false" ]
+  # Apply DnsServers only when at least one server is provided; empty keeps the AWS default.
+  HasDnsServers: !Not [ !Equals [ !Join [ ",", !Ref DnsServers ], "" ] ]
 
 Resources:
   ClientVpnEndpoint:
@@ -42,6 +52,8 @@ Resources:
       ServerCertificateArn: !Ref ServerCertArn
       ClientCidrBlock: !Ref ClientCidr
       SplitTunnel: !Ref SplitTunnel
+      # Push DNS servers to clients only when provided; otherwise keep the client default.
+      DnsServers: !If [ HasDnsServers, !Ref DnsServers, !Ref "AWS::NoValue" ]
       AuthenticationOptions:
         - Type: certificate-authentication
           MutualAuthentication:
@@ -82,6 +94,16 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       TargetVpcSubnetId: !Ref SubnetId
       Description: Full tunnel default route (only when SplitTunnel=false).
+
+  FullTunnelAuthRule:
+    Type: AWS::EC2::ClientVpnAuthorizationRule
+    Condition: IsFullTunnel
+    DependsOn: TargetNetworkAssociation
+    Properties:
+      ClientVpnEndpointId: !Ref ClientVpnEndpoint
+      TargetNetworkCidr: 0.0.0.0/0
+      AuthorizeAllGroups: true
+      Description: Authorize internet access (full tunnel only).
 
 Outputs:
   ClientVpnEndpointId:
