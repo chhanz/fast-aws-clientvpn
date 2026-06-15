@@ -4,9 +4,9 @@ DESIGN-PLAN.md
 # Per-environment config (may contain sensitive values)
 clientvpn.conf
 
-# Certificate / key artifacts (CERT_DIR="$HOME/clientvpn-certs" in mgt-clientvpn.sh)
-# CERT_DIR lives under $HOME, outside this repo, but ignore these patterns
-# in case artifacts are ever copied or generated inside the working tree.
+# Certificate / key artifacts (CERT_DIR="$SCRIPT_DIR/clientvpn-certs" in mgt-clientvpn.sh)
+# Certificates are generated next to the script, inside this repo, so these
+# patterns keep them out of version control.
 clientvpn-certs/
 *.pem
 *.key

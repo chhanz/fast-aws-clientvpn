@@ -13,7 +13,6 @@ set -euo pipefail
 
 # ===== Fixed script values (environment values are loaded only from clientvpn.conf) =====
 STACK=clientvpn-stack
-CERT_DIR="$HOME/clientvpn-certs"
 CERT_TAG="clientvpn-server"     # ACM tag = single source of truth for idempotency
 TEMPLATE_FILE="clientvpn.yaml"
 EASYRSA_REPO="https://github.com/OpenVPN/easy-rsa"
@@ -21,6 +20,7 @@ EASYRSA_REPO="https://github.com/OpenVPN/easy-rsa"
 # Directory where this script lives (so conf/template are always found in the same place, no matter where it is run from)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONF_FILE="$SCRIPT_DIR/clientvpn.conf"
+CERT_DIR="$SCRIPT_DIR/clientvpn-certs"   # certificates are kept next to the script (current path)
 
 # REGION/VPC_ID/SUBNET_ID/CLIENT_CIDR/TARGET_CIDR/SPLIT_TUNNEL are injected by
 # load_conf via source (SPLIT_TUNNEL is overridden to false only on deploy --full-tunnel).
@@ -152,7 +152,7 @@ create_and_import_cert() {
     info "Initializing PKI and generating certificates (CA/server/client1)..." >&2
     ./easyrsa init-pki >&2
     ./easyrsa --batch build-ca nopass >&2
-    ./easyrsa --batch build-server-full server nopass >&2
+    ./easyrsa --batch --san=DNS:server build-server-full server nopass >&2
     ./easyrsa --batch build-client-full client1 nopass >&2
     # Restrict permissions right after key generation
     chmod 600 pki/private/*.key
