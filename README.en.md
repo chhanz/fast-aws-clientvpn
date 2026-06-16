@@ -22,11 +22,11 @@ and client are signed by the same CA).
 
 ## Prerequisites
 
-- Execution host: Amazon Linux 2023 (or an equivalent Linux)
-- AWS CLI v2 installed and credentials configured (`aws configure` or an EC2 instance role)
+- Execution host: MacOS / Linux (bash environment)
+- AWS CLI v2 installed and credentials configured (`aws configure`)
 - `git` installed (easy-rsa is downloaded when generating certificates)
 - Permissions required for the account in use: ACM, EC2 (Client VPN), CloudFormation
-- The target VPC and subnet must already exist.
+- The target VPC and subnet must exist, and an internet gateway or NAT gateway is required if external access is needed.
 
 ## Usage Order
 
